@@ -62,9 +62,50 @@ Stream.prototype.nextTick = function(callback) {
 			return
 		}
 		
-		// if there are no problems with the response send data
-		callback(null, body)
+		// if there are no problems with the response format it for delivery
+		var data = self.formatData(body)
+		
+		callback(null, data)
 	})
+}
+
+Stream.prototype.formatData = function(raw) {
+	var data = raw.split("\n")
+		
+	//remove superfluous elements
+	var se0 = data.indexOf("\r")
+	var se1 = data.indexOf("")
+	
+	if(se0 > -1) {
+		data.splice(se0, 1)
+	}
+	
+	if(se1 > -1) {
+		data.splice(se0, 1)
+	}
+	
+	// prepare result
+	var result = []
+	
+	for(i=0; i<data.length; i++) {
+		var attributes = data[i].split(",")
+		
+		var observation = {
+			pair: attributes[0],
+			timestamp: attributes[1],
+			bid_fig: attributes[2],
+			bid_pts: attributes[3],
+			ask_fig: attributes[4],
+			ask_pts: attributes[5],
+			high: attributes[6],
+			low: attributes[7],
+			mid: attributes[8]
+		}
+		
+		result.push(observation)
+	}
+	
+	return result
 }
 
 module.exports = Stream

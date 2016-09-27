@@ -13,6 +13,7 @@ io.on('connection', function (socket) {
 	stream.authenticate(function(err, res) {
 		if(err) {
 			console.log(err)
+			socket.disconnect()
 			return
 		}
 		
@@ -24,6 +25,7 @@ io.on('connection', function (socket) {
 			stream.nextTick(function(err, res) {
 				if(err) {
 					console.log(err)
+					socket.disconnect()
 					return
 				}
 				
