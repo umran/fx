@@ -1,9 +1,15 @@
 var request = require('request')
+var EventEmitter = require('events').EventEmitter
+var util = require('util')
+var auth_cond = new RegExp(/[a-z]{10}:[a-z]{4}[0-9]{4}:/)
+var re_cond = new RegExp(/([A-Z]{3}\/[A-Z]{3}){2}/)
 
 function Stream(options) {
 	this._options = options
 	this._session_id
 }
+
+util.inherits(Stream, EventEmitter)
 
 Stream.prototype.authenticate = function(callback) {
 	var self = this
@@ -21,7 +27,7 @@ Stream.prototype.authenticate = function(callback) {
 		}
 		
 		// return error if authentication fails
-		if (body.indexOf("elemetrics:ibra1369:nonce:") < 0) {
+		if (body.match(auth_cond) === null) {
 			callback(106)
 			return
 		}
@@ -48,7 +54,8 @@ Stream.prototype.nextTick = function(callback) {
 		}
 		
 		// check if the right data was returned
-		if(body.indexOf("EUR/USDUSD/JPYGBP/USDEUR/GBPUSD/CHFEUR/JPYEUR/CHFUSD/CADAUD/USDGBP/JPY") > 0) {
+		if(body.match(re_cond) !== null) {
+			
 			// renegotiate session
 			self.authenticate(function(err){
 				if(err) {
@@ -62,7 +69,7 @@ Stream.prototype.nextTick = function(callback) {
 			return
 		}
 		
-		// if there are no problems with the response format it for delivery
+		// if there are no problems with the response, format it for delivery
 		var data = self.formatData(body)
 		
 		callback(null, data)
@@ -99,13 +106,35 @@ Stream.prototype.formatData = function(raw) {
 			ask_pts: attributes[5],
 			high: attributes[6],
 			low: attributes[7],
-			mid: attributes[8]
+			mid: attributes[8],
+			delay: new Date().getTime() - attributes[1]
 		}
 		
 		result.push(observation)
 	}
 	
 	return result
+}
+
+Stream.prototype.startTicking = function() {
+	var self = this
+	
+	setInterval(nextTick, 1000)
+	
+	function nextTick() {
+		self.nextTick(function(err, res) {
+			if(err) {
+				console.log(err)
+				return
+			}
+	
+			if(res) {
+				self.emit("data", res)
+			} else {
+				console.log("renegotiating session")
+			}
+		})
+	}
 }
 
 module.exports = Stream
